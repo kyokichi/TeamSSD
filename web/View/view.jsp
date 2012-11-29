@@ -16,4 +16,16 @@ else if(task.equals("getInfo"))
 
     out.print(WebApp.viewTestInfo(id));
 }
+else if(task.equals("getTestNames"))
+{
+    out.print(WebApp.viewTestNames());
+}
+
+
+else if(task.equals("deleteTest"))
+{
+    String id = request.getParameter("id");
+
+    out.print(WebApp.deleteTest(id));
+}
 %>

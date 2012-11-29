@@ -36,7 +36,33 @@ public class WebApp
         return output;
     }
 
-    
+    public static String viewTestNames()
+    {
+        DatabaseHelper db = new DatabaseHelper();
+        String output = null;
+
+        try
+        {
+            db.connect();
+            output = db.displayResultSet(db.getTestNames());
+        }
+        catch (ClassNotFoundException ex) {
+            Logger.getLogger(WebApp.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (SQLException ex) {
+            Logger.getLogger(WebApp.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        finally
+        {
+            try {
+                db.disconnect();
+            } catch (SQLException ex) {
+                Logger.getLogger(WebApp.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        return output;
+    }
 
     public static String viewData(String test_id, String node_id)
     {
@@ -60,6 +86,38 @@ public class WebApp
         }
         catch (SQLException ex) {
             Logger.getLogger(WebApp.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        finally
+        {
+            try {
+                db.disconnect();
+            } catch (SQLException ex) {
+                Logger.getLogger(WebApp.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        return output;
+    }
+
+
+    public static String deleteTest(String test_id)
+    {
+        DatabaseHelper db = new DatabaseHelper();
+        String output = null;
+
+        try
+        {
+            db.connect();
+            db.deleteTest(test_id);
+            output = "Success.";
+        }
+        catch (ClassNotFoundException ex) {
+            Logger.getLogger(WebApp.class.getName()).log(Level.SEVERE, null, ex);
+            output = ex+"";
+        }
+        catch (SQLException ex) {
+            Logger.getLogger(WebApp.class.getName()).log(Level.SEVERE, null, ex);
+            output = ex+"";
         }
         finally
         {

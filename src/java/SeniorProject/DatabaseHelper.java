@@ -157,4 +157,154 @@ public class DatabaseHelper
         return rs;
     }
 
+    public int editTest(String rank, String notes, String id) throws SQLException
+    {
+            int num;
+
+            String query = "UPDATE test_info SET rank=?, notes=? WHERE test_name_id=?";
+
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, rank);
+            stmt.setString(2, notes);
+            stmt.setString(3, id);
+            num = stmt.executeUpdate();
+
+            stmt.close();
+
+            if(!con.isClosed())
+                con.close();
+
+            return num;
+
+    }
+
+    public int deleteTest(String id) throws SQLException
+    {
+        int num;
+
+        try
+        {
+            con.setAutoCommit(false);
+
+            String query = "DELETE FROM test_info WHERE id=?";
+
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, id);
+            num = stmt.executeUpdate();
+            stmt.close();
+
+            query = "DELETE FROM tests WHERE info_id=?";
+
+            PreparedStatement stmt2 = con.prepareStatement(query);
+            stmt2.setString(1, id);
+            num += stmt2.executeUpdate();
+            stmt2.close();
+
+            con.commit();
+            System.out.println("Time: Transaction committed.");
+            con.setAutoCommit(true);
+        }
+        catch (SQLException ex)
+        {
+            if(con != null)
+            {
+                con.rollback();
+                System.out.println("Time: Transaction rolled back.");
+            }
+
+            throw ex;
+        }
+
+        return num;
+    }
+
+    public int loadTest(String client_filename, String server_filename, String id) throws SQLException
+    {
+        int num;
+        ResultSet rs;
+
+        try
+        {
+            con.setAutoCommit(false);
+            String query = "insert into test_info (test_name_id, client_filename, server_filename)" +
+                            " values (?, ?, ?)";
+
+            PreparedStatement st = con.prepareStatement(query);
+            st.setString(1, id);
+            st.setString(2, client_filename);
+            st.setString(3, server_filename);
+            st.executeUpdate();
+            st.close();
+
+            String info_id;
+            query = "select max(id) from test_info";
+            st = con.prepareStatement(query);
+            rs = st.executeQuery();
+
+            if(rs.next())
+                info_id = rs.getString(1);
+            else
+                info_id = "something bad happened";
+            st.close();
+            rs.close();
+
+            query = "load data local infile ? " +
+            "into table tests " +
+            "fields terminated by ' ' " +
+            "lines terminated by '\n' " +
+            "ignore 5 lines " +
+            "(@date, watts) " +
+            "set info_id=?, timestamp=str_to_date(@date, '[%H:%i:%S]'), node=1";
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, "/etc/Portal/demo/" + client_filename);
+            stmt.setString(2, info_id);
+            num = stmt.executeUpdate();
+            stmt.close();
+
+            query = "load data local infile ? " +
+            "into table tests " +
+            "fields terminated by ' ' " +
+            "lines terminated by '\n' " +
+            "ignore 5 lines " +
+            "(@date, watts) " +
+            "set info_id=?, timestamp=str_to_date(@date, '[%H:%i:%S]'), node=2";
+            PreparedStatement stmt2 = con.prepareStatement(query);
+            stmt2.setString(1, "/etc/Portal/demo/" + server_filename);
+            stmt2.setString(2, info_id);
+            num += stmt2.executeUpdate();
+            stmt2.close();
+
+            con.commit();
+            System.out.println("Time: Transaction committed.");
+            con.setAutoCommit(true);
+        }
+        catch (SQLException ex)
+        {
+            if(con != null)
+            {
+                con.rollback();
+                System.out.println("Time: Transaction rolled back.");
+            }
+
+            throw ex;
+        }
+
+        return num;
+    }
+
+    public ResultSet getTestNames() throws SQLException
+    {
+        ResultSet rs = null;
+        PreparedStatement ps;
+
+        String query = "SELECT *"
+                + " FROM test_name";
+        ps = con.prepareStatement(query);
+
+        rs = ps.executeQuery();
+     //   ps.close();
+
+        return rs;
+    }
+
 }
