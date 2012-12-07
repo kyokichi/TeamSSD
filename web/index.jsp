@@ -14,6 +14,7 @@
         <ul>
             <li><a href="View/">View Past Tests</a></li>
             <li><a href="ViewCurrent/">View Current Power Reading</a></li>
+            <li><a href="ViewCurrent/">Schedule a Job</a></li>
         </ul>
     </body>
 </html>
