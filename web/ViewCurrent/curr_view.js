@@ -21,7 +21,8 @@ Ext.onReady(function()
                 title:'Navigation',
                 region:'west',
                 width:200,
-                layout:'fit'
+                layout:'fit',
+                html:navigation()
             },
             {
                 //This is the panel that contains the tests and charts

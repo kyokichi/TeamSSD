@@ -1,17 +1,40 @@
 package SeniorProject;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DatabaseHelper
 {
+    public static void main(String[] args)
+    {
+        try {
+            DateFormat inputFormat = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy");
+            Date indate = inputFormat.parse("Fri Oct 26 18:06:27 PDT 2012");
+            DateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            System.out.println(outputFormat.format(indate));
+        }
+        catch (ParseException ex) {
+            Logger.getLogger(DatabaseHelper.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
     private String user = "root", pwd = "sherman1";
     private String db_url = "jdbc:mysql://localhost/senior_project";
+    private String dir = "/home/alexis/";
 
     private Connection con;
 
@@ -161,13 +184,15 @@ public class DatabaseHelper
     {
             int num;
 
-            String query = "UPDATE test_info SET rank=?, notes=? WHERE test_name_id=?";
+            String query = "UPDATE test_info SET rank=?, notes=? WHERE id=?";
 
             PreparedStatement stmt = con.prepareStatement(query);
             stmt.setString(1, rank);
             stmt.setString(2, notes);
             stmt.setString(3, id);
             num = stmt.executeUpdate();
+
+            System.out.println(stmt.toString());
 
             stmt.close();
 
@@ -218,21 +243,52 @@ public class DatabaseHelper
         return num;
     }
 
-    public int loadTest(String client_filename, String server_filename, String id) throws SQLException
+    public int loadTest(String client_filename, String server_filename, String test_name_id) 
+            throws SQLException, FileNotFoundException, IOException, ParseException
     {
         int num;
         ResultSet rs;
+        BufferedReader br = null;
 
         try
         {
+            // First we get the dates from the file
+            String start = "", end = "", current;
+            int line = 0;
+
+            br = new BufferedReader(new FileReader(client_filename));
+
+            while((current = br.readLine()) != null)
+            {
+                line++;
+
+                if(line == 1) //skip the first line
+                    continue;
+
+                if(line > 3) //exit if the line is past the 3rd
+                    break;
+
+                DateFormat inputFormat = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy");
+                Date date = inputFormat.parse(current);
+                DateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                System.out.println(outputFormat.format(date));
+
+                if(line == 2)
+                    start = outputFormat.format(date);
+                if(line == 3)
+                    end = outputFormat.format(date);
+            }
+
             con.setAutoCommit(false);
-            String query = "insert into test_info (test_name_id, client_filename, server_filename)" +
-                            " values (?, ?, ?)";
+            String query = "insert into test_info (test_name_id, start, end, client_filename, server_filename)" +
+                            " values (?, ?, ?, ?, ?)";
 
             PreparedStatement st = con.prepareStatement(query);
-            st.setString(1, id);
-            st.setString(2, client_filename);
-            st.setString(3, server_filename);
+            st.setString(1, test_name_id);
+            st.setString(2, start);
+            st.setString(3, end);
+            st.setString(4, client_filename);
+            st.setString(5, server_filename);
             st.executeUpdate();
             st.close();
 
@@ -256,7 +312,7 @@ public class DatabaseHelper
             "(@date, watts) " +
             "set info_id=?, timestamp=str_to_date(@date, '[%H:%i:%S]'), node=1";
             PreparedStatement stmt = con.prepareStatement(query);
-            stmt.setString(1, "/etc/Portal/demo/" + client_filename);
+            stmt.setString(1, client_filename);
             stmt.setString(2, info_id);
             num = stmt.executeUpdate();
             stmt.close();
@@ -269,7 +325,7 @@ public class DatabaseHelper
             "(@date, watts) " +
             "set info_id=?, timestamp=str_to_date(@date, '[%H:%i:%S]'), node=2";
             PreparedStatement stmt2 = con.prepareStatement(query);
-            stmt2.setString(1, "/etc/Portal/demo/" + server_filename);
+            stmt2.setString(1, server_filename);
             stmt2.setString(2, info_id);
             num += stmt2.executeUpdate();
             stmt2.close();
@@ -288,6 +344,10 @@ public class DatabaseHelper
 
             throw ex;
         }
+        finally
+        {
+            br.close();
+        }
 
         return num;
     }
@@ -297,7 +357,7 @@ public class DatabaseHelper
         ResultSet rs = null;
         PreparedStatement ps;
 
-        String query = "SELECT *"
+        String query = "SELECT id, test_name"
                 + " FROM test_name";
         ps = con.prepareStatement(query);
 
@@ -305,6 +365,52 @@ public class DatabaseHelper
      //   ps.close();
 
         return rs;
+    }
+
+    public int editTestName(String newName, String id) throws SQLException
+    {
+            int num;
+
+            String query = "UPDATE test_name SET test_name=? WHERE id=?";
+
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, newName);
+            stmt.setString(2, id);
+            num = stmt.executeUpdate();
+
+            stmt.close();
+
+            return num;
+    }
+
+    public int addTestName(String name) throws SQLException
+    {
+            int num;
+
+            String query = "INSERT INTO test_name (test_name) VALUES (?)";
+
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, name);
+            num = stmt.executeUpdate();
+
+            stmt.close();
+
+            return num;
+    }
+
+    public int deleteTestName(String name) throws SQLException
+    {
+            int num;
+
+            String query = "DELETE FROM test_name WHERE test_name=?";
+
+            PreparedStatement stmt = con.prepareStatement(query);
+            stmt.setString(1, name);
+            num = stmt.executeUpdate();
+
+            stmt.close();
+
+            return num;
     }
 
 }

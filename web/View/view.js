@@ -38,7 +38,13 @@ Ext.onReady(function()
             {
                 text: 'Show Chart',
                 handler: function() {
-                    updateChartsGrids();
+                    updateChartsGrids(true);
+                }
+            },
+            {
+                text: 'Show Grid',
+                handler: function() {
+                    updateChartsGrids(false);
                 }
             },
             {
@@ -92,13 +98,22 @@ Ext.onReady(function()
             }
         },
 
-        tbar: [{
-            text: 'Load Test',
-            handler : function()
+        tbar: [
             {
-                loadTest();
+                text: 'Load Test',
+                handler : function()
+                {
+                    loadTest();
+                }
+            },
+            {
+                text:'Edit Test Names',
+                handler: function()
+                {
+                    testNames();
+                }
             }
-        }]
+        ]
     });
 
 
@@ -113,7 +128,8 @@ Ext.onReady(function()
                 title:'Navigation',
                 region:'west',
                 width:200,
-                layout:'fit'
+                layout:'fit',
+                html:navigation()
             },
             {
                 //This is the panel that contains the tests and charts
@@ -157,20 +173,20 @@ Ext.onReady(function()
 
     
 
-    function updateChartsGrids()
+    function updateChartsGrids(isChart)
     {
         var record = infoGrid.getSelectionModel().getSelection()[0];
 
         if(record)
         {
             var clientPanel = Ext.getCmp('client');
-            updatePanel(clientPanel, record.get('id'), '1', 'Client');
+            updatePanel(isChart, clientPanel, record.get('id'), '1', 'Client');
 
             var serverPanel = Ext.getCmp('server');
-            updatePanel(serverPanel, record.get('id'), '2', 'Server');
+            updatePanel(isChart, serverPanel, record.get('id'), '2', 'Server');
 
             var clientServerPanel = Ext.getCmp('client_server');
-            updatePanel(clientServerPanel, record.get('id'), null, 'Client & Server');
+            updatePanel(isChart, clientServerPanel, record.get('id'), null, 'Client & Server');
 
             /*var store = createDataStore(urlString, {task:'getData', test_id:record.get('id'), node_id:'1'});
             var grid = createBasicGrid(store, 'Client');
@@ -181,7 +197,7 @@ Ext.onReady(function()
         }
     }
 
-    function updatePanel(panel, test_id, node_id, titleString)
+    function updatePanel(isChart, panel, test_id, node_id, titleString)
     {
         var params = {task:'getData', test_id:test_id};
 
@@ -203,7 +219,10 @@ Ext.onReady(function()
         });*/
 
         panel.items.clear();
-        panel.add(chart);
+        if(isChart)
+            panel.add(chart);
+        else
+            panel.add(grid);
         panel.update();
     }
 
@@ -250,6 +269,7 @@ Ext.onReady(function()
                                 success: function(form, action) {
                                    Ext.Msg.alert('Success', action.result.msg);
                                    infoStore.load();
+                                   editWindow.close();
                                 },
                                 
                                 failure: function(form, action) {
@@ -262,7 +282,7 @@ Ext.onReady(function()
         });
         
         
-        Ext.create('Ext.window.Window', {
+        var editWindow = Ext.create('Ext.window.Window', {
             title: 'Edit Test',
             height: 200,
             width: 400,
@@ -305,32 +325,6 @@ Ext.onReady(function()
 
     function loadTest()
     {
-        var testNameStore = Ext.create('Ext.data.Store', {
-            fields:[
-                    {name:'id', type:'int'},
-                    {name:'test_name', type:'string'}
-                ],
-
-            proxy:{
-                type:'ajax',
-                url:urlString,
-                reader: {
-                    type:'json',
-                    root:'data'
-                },
-                extraParams:{ task:'getTestNames' }
-            },
-
-            autoLoad:true
-        });
-
-        var testNameComboBox = Ext.create('Ext.form.ComboBox', {
-            fieldLabel: 'Test Name',
-            store: testNameStore,
-            displayField: 'test_name',
-            valueField: 'id'
-        });
-
         var loadForm = Ext.create('Ext.form.Panel', {
             bodyPadding: 5,
 
@@ -342,7 +336,10 @@ Ext.onReady(function()
                 anchor: '100%'
             },
 
-            items: [ testNameComboBox ],
+            items: [ createTestNameComboBox(), 
+                createFilesComboBox('Client Filename', 'client_file'),
+                createFilesComboBox('Server Filename', 'server_file')
+            ],
 
             buttons: [
                 {
@@ -357,6 +354,7 @@ Ext.onReady(function()
                                 success: function(form, action) {
                                    Ext.Msg.alert('Success', action.result.msg);
                                    infoStore.load();
+                                   loadTestWindow.close();
                                 },
 
                                 failure: function(form, action) {
@@ -369,13 +367,183 @@ Ext.onReady(function()
         });
 
 
-        Ext.create('Ext.window.Window', {
+        var loadTestWindow = Ext.create('Ext.window.Window', {
             title: 'Edit Test',
             height: 200,
-            width: 400,
+            width: 700,
             layout: 'fit',
             items: loadForm
         }).show();
+    }
+
+
+
+    /* This function is in charge of that little window that appears for editing test names */
+    function testNames()
+    {
+        /* Store and Grid */
+        var testNameStore = Ext.create('Ext.data.Store', {
+            fields:[
+                    {name:'id', type:'int'},
+                    {name:'test_name', type:'string'}
+                ],
+
+            proxy:{
+                type:'ajax',
+                url:urlString,
+                reader: {
+                    type:'json',
+                    root:'data'
+                },
+                extraParams:{
+                    task:'getTestNames'
+                }
+            },
+
+            autoLoad:true
+        });
+
+        var context = new Ext.menu.Menu({
+            items: [
+                {
+                    text:'Edit Test Name',
+                    handler: function()
+                    {
+                        var record = testNameGrid.getSelectionModel().getSelection()[0];
+
+                        if(record)
+                        {
+                            addEditTestName(testNameStore, 'editTestName', 'Edit Test Name',
+                                record.get('id'), record.get('test_name'));
+                        }
+                    }
+                }
+            ]
+        });
+
+        var testNameGrid = Ext.create('Ext.grid.Panel', {
+            store:testNameStore,
+            columns:[
+                {text:'ID', dataIndex:'id', flex:1, hidden:true},
+                {text:'Test Name', dataIndex:'test_name', flex:1}
+            ],
+
+            viewConfig:{
+                listeners: {
+                    itemcontextmenu: function(view, record, node, index, event) {
+                        event.stopEvent();
+                        context.showAt(event.getXY());
+                        return false;
+                    }
+                }
+            },
+
+            tbar: [
+                {
+                    text: 'Add Test Name',
+                    handler : function()
+                    {
+                        addEditTestName(testNameStore, 'addTestName', 'Add Test Name');
+                    }
+                }
+            ]
+        });
+
+        /* Window */
+        Ext.create('Ext.window.Window', {
+            title: 'Edit Test Name',
+            height: 400,
+            width: 400,
+            layout: 'fit',
+            items: testNameGrid
+        }).show();
+    }
+
+
+    function addEditTestName(store, taskString, titleString, id, name)
+    {
+        var editForm = Ext.create('Ext.form.Panel', {
+            bodyPadding: 5,
+
+            url: urlString,
+            baseParams:{ task:taskString, id:id },
+
+            layout: 'anchor',
+            defaults: {
+                anchor: '100%'
+            },
+
+            items: [{
+                    xtype:'textfield',
+                    fieldLabel: 'Name',
+                    name: 'name',
+                    value:name
+                }],
+
+            buttons: [
+                {
+                    text: 'Submit',
+                    handler: function()
+                    {
+                        var form = this.up('form').getForm();
+
+                        if (form.isValid())
+                        {
+                            form.submit({
+                                success: function(form, action) {
+                                   Ext.Msg.alert('Success', action.result.msg);
+                                   store.load();
+                                   addEditWindow.close();
+                                },
+
+                                failure: function(form, action) {
+                                    Ext.Msg.alert('Failed', action.result.msg);
+                                }
+                            });
+                        }
+                    }
+                }]
+        });
+
+
+        var addEditWindow = Ext.create('Ext.window.Window', {
+            title: titleString,
+            height: 100,
+            width: 400,
+            layout: 'fit',
+            items: editForm
+        }).show();
+    }
+
+    function createFilesComboBox(fieldLabel, fieldName)
+    {
+        var fileStore = Ext.create('Ext.data.Store', {
+            fields:[
+                    {name:'name', type:'string'}
+                ],
+
+            proxy:{
+                type:'ajax',
+                url:urlString,
+                reader: {
+                    type:'json',
+                    root:'data'
+                },
+                extraParams:{ task:'getFiles' }
+            },
+
+            autoLoad:true
+        });
+
+        var fileCombo = Ext.create('Ext.form.ComboBox', {
+            fieldLabel: fieldLabel,
+            store: fileStore,
+            name:fieldName,
+            displayField: 'name',
+            valueField: 'name'
+        });
+
+        return fileCombo;
     }
 
 });

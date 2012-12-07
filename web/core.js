@@ -146,3 +146,43 @@ function createPanel(item, renderString, height, width)
 
     return panel;
 }
+
+
+function createTestNameComboBox()
+{
+    var testNameStore = Ext.create('Ext.data.Store', {
+        fields:[
+                {name:'id', type:'int'},
+                {name:'test_name', type:'string'}
+            ],
+
+        proxy:{
+            type:'ajax',
+            url:'../core.jsp',
+            reader: {
+                type:'json',
+                root:'data'
+            },
+            extraParams:{ task:'getTestNames' }
+        },
+
+        autoLoad:true
+    });
+
+    var testNameComboBox = Ext.create('Ext.form.ComboBox', {
+        fieldLabel: 'Test Name',
+        store: testNameStore,
+        name:'test_name',
+        displayField: 'test_name',
+        valueField: 'id'
+    });
+
+    return testNameComboBox;
+}
+
+function navigation()
+{
+    return '<a href="../View/">View Past Power</a><br/>'
+        +'<a href="../ViewCurrent">View Current Power</a><br/>'
+        +'<a href="../Schedule">Schedule a Job</a>';
+}
